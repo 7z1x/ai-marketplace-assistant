@@ -13,7 +13,7 @@ export function Footer() {
                 <ShoppingBag className="h-5 w-5 text-primary-foreground" />
               </div>
               <span className="text-xl font-bold">
-                Tech<span className="text-gradient">Store</span>
+                Tech<span className="text-primary">Store</span>
               </span>
             </Link>
             <p className="text-sm text-muted-foreground">

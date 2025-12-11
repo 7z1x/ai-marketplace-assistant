@@ -26,7 +26,7 @@ export function Header({ onSearch, searchQuery = '' }: HeaderProps) {
             <ShoppingBag className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold hidden sm:inline-block">
-            Tech<span className="text-gradient">Store</span>
+            Tech<span className="text-primary">Store</span>
           </span>
         </Link>
 

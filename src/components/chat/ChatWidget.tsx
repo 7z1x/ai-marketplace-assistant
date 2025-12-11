@@ -1,29 +1,52 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Sparkles, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Sparkles, Loader2, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { ChatMessage, Product } from '@/types';
+import { SalesAgentClient, getOrCreateSessionId } from '@/lib/ws';
+import { API_CONFIG } from '@/config/api';
+import type { ChatMessage } from '@/types';
 
 interface ChatWidgetProps {
   productContext?: {
     product_id: string;
     name: string;
   };
+  // Props untuk mengontrol buka/tutup dari component induk (misal: tombol CTA di Home)
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function ChatWidget({ productContext }: ChatWidgetProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function ChatWidget({ productContext, isOpen: externalIsOpen, onOpenChange }: ChatWidgetProps) {
+  // State Internal (dipakai jika tidak ada kontrol dari luar)
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+
+  // Menentukan apakah widget terbuka berdasarkan props atau state internal
+  const isWidgetOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+
+  // Helper untuk mengubah state buka/tutup
+  const toggleOpen = (newState: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(newState);
+    } else {
+      setInternalIsOpen(newState);
+    }
+  };
+
+  // State Chat & Koneksi
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       role: 'assistant',
-      content: "Hi! I'm your AI shopping assistant. Ask me anything about our products, shipping, returns, or get personalized recommendations!",
+      content: "Hi! I'm your AI shopping assistant. Ask me anything about our products, stock, or personalized recommendations!",
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+  const [agentClient, setAgentClient] = useState<SalesAgentClient | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -31,71 +54,59 @@ export function ChatWidget({ productContext }: ChatWidgetProps) {
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (isWidgetOpen) {
+      scrollToBottom();
+    }
+  }, [messages, isWidgetOpen]);
 
-  // Add product context message when product changes
+  // --- LOGIKA WEBSOCKET ---
   useEffect(() => {
-    if (productContext && isOpen) {
-      const contextMessage: ChatMessage = {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: `I see you're looking at **${productContext.name}**. Would you like to know more about its features, availability, or pricing?`,
-        timestamp: new Date(),
-        productContext,
-      };
-      
-      // Only add if not already present
-      const hasContext = messages.some(m => m.productContext?.product_id === productContext.product_id);
-      if (!hasContext) {
-        setMessages(prev => [...prev, contextMessage]);
+    const sessionId = getOrCreateSessionId();
+
+    // Inisialisasi Client menggunakan konfigurasi dari API_CONFIG
+    const client = new SalesAgentClient(
+      API_CONFIG.COMPANY_ID,
+      sessionId,
+      API_CONFIG.WS_BASE_URL
+    );
+
+    // Handler ketika pesan diterima dari AI
+    client.onMessage = (text) => {
+      setIsLoading(false);
+
+      setMessages(prev => {
+        return [...prev, {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: text,
+          timestamp: new Date()
+        }];
+      });
+    };
+
+    // Handler status koneksi
+    client.onStatusChange = (status) => {
+      setConnectionStatus(status);
+      if (status === 'connected') {
+        setIsLoading(false);
       }
-    }
-  }, [productContext, isOpen]);
+    };
 
-  const simulateAIResponse = async (userMessage: string): Promise<string> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+    // Mulai koneksi
+    client.connect();
+    setAgentClient(client);
 
-    const lowerMessage = userMessage.toLowerCase();
+    // Cleanup saat component di-unmount
+    return () => {
+      client.disconnect();
+    };
+  }, []);
 
-    // Product-related queries
-    if (productContext) {
-      if (lowerMessage.includes('price') || lowerMessage.includes('cost') || lowerMessage.includes('harga')) {
-        return `The **${productContext.name}** is competitively priced. For real-time pricing and stock availability, our system fetches the latest data from the backend. Would you like me to check the current availability for you?`;
-      }
-      if (lowerMessage.includes('stock') || lowerMessage.includes('available') || lowerMessage.includes('stok')) {
-        return `I can check the real-time stock for **${productContext.name}** from our inventory system. Based on the latest data, this product is currently in stock. Would you like to add it to your cart?`;
-      }
-      if (lowerMessage.includes('spec') || lowerMessage.includes('feature') || lowerMessage.includes('detail')) {
-        return `**${productContext.name}** comes with premium features and specifications. You can see the detailed specifications on the product page. Is there a specific feature you'd like to know more about?`;
-      }
-    }
-
-    // General queries
-    if (lowerMessage.includes('shipping') || lowerMessage.includes('delivery') || lowerMessage.includes('pengiriman')) {
-      return "We offer **free shipping** on orders over Rp 1,000,000! Standard delivery takes 3-5 business days, and express shipping (1-2 days) is available for an additional fee. Would you like more details about our shipping policies?";
-    }
-    if (lowerMessage.includes('return') || lowerMessage.includes('refund') || lowerMessage.includes('retur')) {
-      return "We have a **30-day return policy** for all products in original condition. Items must have all original packaging and accessories. The refund will be processed within 5-7 business days after we receive the returned item.";
-    }
-    if (lowerMessage.includes('warranty') || lowerMessage.includes('garansi')) {
-      return "All products come with **manufacturer warranty**. Extended warranty options are available at checkout for most electronics. Warranty periods vary by product - typically 1-3 years for electronics.";
-    }
-    if (lowerMessage.includes('recommend') || lowerMessage.includes('suggest') || lowerMessage.includes('rekomendasi')) {
-      return "Based on popular choices, I'd recommend checking out:\n\n• **ASUS ROG Strix G16** - Best for gaming\n• **MacBook Pro M3 Max** - Best for professionals\n• **Sony WH-1000XM5** - Best headphones\n\nWould you like details on any of these?";
-    }
-    if (lowerMessage.includes('payment') || lowerMessage.includes('pay') || lowerMessage.includes('bayar')) {
-      return "We accept various payment methods including:\n\n• Credit/Debit Cards (Visa, Mastercard)\n• Bank Transfer\n• E-wallets (GoPay, OVO, Dana)\n• Virtual Account\n• COD (for select areas)\n\nAll transactions are secured with SSL encryption.";
-    }
-
-    // Default response
-    return "That's a great question! I'm here to help you with product information, pricing, stock availability, shipping, returns, and personalized recommendations. What would you like to know more about?";
-  };
-
+  // --- LOGIKA PENGIRIMAN PESAN ---
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim()) return;
 
+    // 1. Tampilkan pesan user di UI
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
@@ -108,27 +119,19 @@ export function ChatWidget({ productContext }: ChatWidgetProps) {
     setInput('');
     setIsLoading(true);
 
-    try {
-      const response = await simulateAIResponse(userMessage.content);
-      
-      const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: response,
-        timestamp: new Date(),
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: "I'm sorry, I encountered an error. Please try again.",
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
+    // 2. Kirim ke WebSocket
+    if (agentClient && connectionStatus === 'connected') {
+      agentClient.send(userMessage.content);
+    } else {
+      // Fallback jika koneksi terputus
       setIsLoading(false);
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: "⚠️ Connection lost. Trying to reconnect...",
+        timestamp: new Date()
+      }]);
+      agentClient?.connect(); // Coba connect ulang
     }
   };
 
@@ -139,6 +142,26 @@ export function ChatWidget({ productContext }: ChatWidgetProps) {
     }
   };
 
+  // --- LOGIKA CONTEXT PRODUK ---
+  useEffect(() => {
+    if (productContext && isWidgetOpen) {
+      const contextMessageId = `ctx-${productContext.product_id}`;
+
+      const hasContext = messages.some(m => m.id === contextMessageId || m.productContext?.product_id === productContext.product_id);
+
+      if (!hasContext) {
+        const contextMessage: ChatMessage = {
+          id: contextMessageId,
+          role: 'assistant',
+          content: `I see you're looking at **${productContext.name}**. Would you like to check stock or negotiate the price?`,
+          timestamp: new Date(),
+          productContext,
+        };
+        setMessages(prev => [...prev, contextMessage]);
+      }
+    }
+  }, [productContext, isWidgetOpen]);
+
   return (
     <>
       {/* Chat Button */}
@@ -146,44 +169,59 @@ export function ChatWidget({ productContext }: ChatWidgetProps) {
         variant="chat"
         size="iconLg"
         className={cn(
-          "fixed bottom-6 right-6 z-50 h-14 w-14 shadow-chat",
-          isOpen && "hidden"
+          "fixed bottom-6 right-6 z-50 h-14 w-14 shadow-chat transition-transform duration-300 hover:scale-110",
+          isWidgetOpen && "hidden"
         )}
-        onClick={() => setIsOpen(true)}
+        onClick={() => toggleOpen(true)}
       >
         <MessageCircle className="h-6 w-6" />
+        {/* Indikator Status di tombol jika error */}
+        {connectionStatus === 'error' || connectionStatus === 'disconnected' ? (
+          <span className="absolute top-0 right-0 h-3 w-3 rounded-full bg-red-500 border-2 border-white"></span>
+        ) : null}
       </Button>
 
       {/* Chat Window */}
       <div
         className={cn(
-          "fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-3rem)] rounded-2xl border bg-card shadow-chat transition-all duration-300",
-          isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
+          "fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-3rem)] rounded-2xl border bg-card shadow-chat transition-all duration-300 origin-bottom-right",
+          isWidgetOpen ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4 pointer-events-none"
         )}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b gradient-primary rounded-t-2xl">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-foreground/20">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
+            <div className="relative">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-foreground/20">
+                <Sparkles className="h-5 w-5 text-primary-foreground" />
+              </div>
+              {/* Indikator Status Koneksi */}
+              <span className={cn(
+                "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-primary transition-colors duration-500",
+                connectionStatus === 'connected' ? "bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]" :
+                  connectionStatus === 'connecting' ? "bg-yellow-400 animate-pulse" : "bg-red-500"
+              )} title={`Status: ${connectionStatus}`} />
             </div>
             <div>
               <h3 className="font-semibold text-primary-foreground">AI Assistant</h3>
-              <p className="text-xs text-primary-foreground/80">Always here to help</p>
+              <p className="text-xs text-primary-foreground/80 flex items-center gap-1">
+                {connectionStatus === 'connected' ? 'Online & Ready' :
+                  connectionStatus === 'connecting' ? 'Connecting...' : 'Offline'}
+              </p>
             </div>
           </div>
           <Button
             variant="ghost"
             size="iconSm"
-            onClick={() => setIsOpen(false)}
+            onClick={() => toggleOpen(false)}
             className="text-primary-foreground hover:bg-primary-foreground/20"
           >
             <X className="h-5 w-5" />
           </Button>
         </div>
 
-        {/* Messages */}
-        <div className="h-[400px] overflow-y-auto p-4 space-y-4">
+        {/* Messages Area */}
+        <div className="h-[400px] overflow-y-auto p-4 space-y-4 bg-muted/30">
           {messages.map((message) => (
             <div
               key={message.id}
@@ -194,15 +232,15 @@ export function ChatWidget({ productContext }: ChatWidgetProps) {
             >
               <div
                 className={cn(
-                  "max-w-[85%] rounded-2xl px-4 py-3 text-sm",
+                  "max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm",
                   message.role === 'user'
-                    ? 'gradient-primary text-primary-foreground rounded-br-md'
-                    : 'bg-secondary text-secondary-foreground rounded-bl-md'
+                    ? 'gradient-primary text-primary-foreground rounded-br-sm'
+                    : 'bg-card text-card-foreground border border-border/50 rounded-bl-sm'
                 )}
               >
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                   {message.content.split('\n').map((line, i) => (
-                    <p key={i} className="mb-1 last:mb-0">
+                    <p key={i} className="mb-1 last:mb-0 leading-relaxed">
                       {line.split(/(\*\*.*?\*\*)/).map((part, j) => {
                         if (part.startsWith('**') && part.endsWith('**')) {
                           return <strong key={j}>{part.slice(2, -2)}</strong>;
@@ -215,46 +253,60 @@ export function ChatWidget({ productContext }: ChatWidgetProps) {
               </div>
             </div>
           ))}
-          
+
           {isLoading && (
             <div className="flex justify-start animate-slide-up">
-              <div className="bg-secondary text-secondary-foreground rounded-2xl rounded-bl-md px-4 py-3">
+              <div className="bg-card border border-border/50 text-muted-foreground rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">Thinking...</span>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span className="text-xs">AI is typing...</span>
                 </div>
               </div>
             </div>
           )}
-          
+
+          {connectionStatus === 'error' && (
+            <div className="flex justify-center animate-fade-in">
+              <div className="bg-destructive/10 text-destructive text-xs px-3 py-1 rounded-full flex items-center gap-1">
+                <WifiOff className="h-3 w-3" />
+                Connection lost
+              </div>
+            </div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
-        <div className="p-4 border-t">
+        {/* Input Area */}
+        <div className="p-4 border-t bg-card rounded-b-2xl">
           <div className="flex gap-2">
             <Input
               variant="chat"
-              placeholder="Ask me anything..."
+              placeholder={connectionStatus === 'connected' ? "Ask about products, stock..." : "Connecting..."}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              disabled={isLoading}
-              className="flex-1"
+              disabled={connectionStatus !== 'connected'}
+              className="flex-1 shadow-inner bg-muted/30"
             />
             <Button
               variant="chat"
               size="icon"
               onClick={handleSend}
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || connectionStatus !== 'connected'}
+              className={cn(
+                "transition-all duration-200",
+                input.trim() ? "scale-100 opacity-100" : "scale-90 opacity-70"
+              )}
             >
               <Send className="h-4 w-4" />
             </Button>
           </div>
-          
+
           {productContext && (
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Viewing: {productContext.name}
+            <p className="text-[10px] text-muted-foreground mt-2 text-center flex items-center justify-center gap-1">
+              <Sparkles className="h-3 w-3 text-primary" />
+              Context: {productContext.name}
             </p>
           )}
         </div>
