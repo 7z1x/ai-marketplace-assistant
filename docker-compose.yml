@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  # Service 1: Backend AI (Python)
+  backend_ai_service:
+    build: ./backend-ai
+    container_name: techstore_brain
+    restart: always
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./backend-ai/.env
+
+  # Service 2: Nginx (Reverse Proxy)
+  nginx:
+    image: nginx:alpine
+    container_name: techstore_gateway
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./backend-ai/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend_ai_service

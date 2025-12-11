@@ -102,7 +102,7 @@ async def main():
     PORT = 8001
     print(f"🚀 AI Server (Python) berjalan di ws://localhost:{PORT}")
     # Gunakan serve tanpa passing path explicit di handler
-    async with websockets.serve(chat_handler, "localhost", PORT):
+    async with websockets.serve(chat_handler, "0.0.0.0", PORT):
         await asyncio.Future()  # Run forever
 
 if __name__ == "__main__":

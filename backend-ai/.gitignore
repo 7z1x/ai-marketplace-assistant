@@ -1,0 +1,19 @@
+# 1. Byte-compiled / Cache (File sampah otomatis Python)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 2. Virtual Environment (Folder installan library, ukurannya besar)
+# (Sesuaikan dengan nama folder env kamu, biasanya .venv atau venv)
+.venv/
+venv/
+env/
+ENV/
+
+# 3. Environment Variables (SANGAT PENTING: Berisi API Key)
+.env
+
+# 4. IDE / Editor Settings (Settingan VS Code/Mac)
+.vscode/
+.idea/
+.DS_Store

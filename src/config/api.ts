@@ -5,10 +5,11 @@ export const API_CONFIG = {
   // Sales Agent Engine API (Knowledge Base)
   ENGINE_BASE_URL: import.meta.env.VITE_ENGINE_API_URL || 'http://localhost:8001',
 
-  // --- TAMBAHKAN INI ---
-  // WebSocket URL (Biasanya sama dengan ENGINE tapi pakai ws://)
-  WS_BASE_URL: import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8001',
-  // ---------------------
+  // --- BAGIAN INI YANG DIUBAH ---
+  // WebSocket URL menggunakan Cloudflare Tunnel Anda
+  // Kita ubah 'https://...' dari Cloudflare menjadi 'wss://...'
+  WS_BASE_URL: 'wss://decide-catering-creator-operators.trycloudflare.com',
+  // ------------------------------
 
   // Backend API (Products, Orders, Stock)
   BACKEND_BASE_URL: import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:8000',
