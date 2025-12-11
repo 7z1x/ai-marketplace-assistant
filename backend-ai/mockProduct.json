@@ -1,0 +1,58 @@
+[
+    {
+        "id": 1,
+        "name": "ASUS ROG Strix G16 Gaming Laptop",
+        "price": 28999000,
+        "stock": 15,
+        "specs": "Intel Core i9-14900HX, RTX 4070 8GB, 32GB DDR5, 1TB SSD, 16\" QHD+ 240Hz"
+    },
+    {
+        "id": 2,
+        "name": "MacBook Pro 16\" M3 Max",
+        "price": 52999000,
+        "stock": 8,
+        "specs": "Apple M3 Max (16-core CPU, 40-core GPU), 48GB Memory, 1TB SSD, Liquid Retina XDR"
+    },
+    {
+        "id": 3,
+        "name": "LG UltraGear 27\" 4K Gaming Monitor",
+        "price": 8499000,
+        "stock": 25,
+        "specs": "4K (3840 x 2160), 144Hz, 1ms GTG, Nano IPS, VESA DisplayHDR 600"
+    },
+    {
+        "id": 4,
+        "name": "Logitech G Pro X Superlight 2",
+        "price": 2299000,
+        "stock": 42,
+        "specs": "HERO 2 Sensor (32K DPI), 60g weight, LIGHTFORCE Switches, 95h battery"
+    },
+    {
+        "id": 5,
+        "name": "Keychron Q1 Pro Mechanical Keyboard",
+        "price": 3199000,
+        "stock": 18,
+        "specs": "75% Layout, Gateron G Pro Switches, Hot-swappable, Bluetooth 5.1, Aluminum body"
+    },
+    {
+        "id": 6,
+        "name": "Sony WH-1000XM5 Wireless Headphones",
+        "price": 5499000,
+        "stock": 30,
+        "specs": "Auto NC Optimizer, 30h battery, LDAC/AAC/SBC, Multipoint connection"
+    },
+    {
+        "id": 7,
+        "name": "iPad Pro 12.9\" M4",
+        "price": 18999000,
+        "stock": 0,
+        "specs": "Apple M4 Chip, Ultra Retina XDR OLED, 256GB-2TB, Wi-Fi 6E"
+    },
+    {
+        "id": 8,
+        "name": "Herman Miller Embody Gaming Chair",
+        "price": 25999000,
+        "stock": 5,
+        "specs": "Sync Fabric, Copper-infused cooling foam, Fully adjustable, 12-year warranty"
+    }
+]
