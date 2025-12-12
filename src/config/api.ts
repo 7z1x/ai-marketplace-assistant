@@ -8,7 +8,7 @@ export const API_CONFIG = {
   // --- BAGIAN INI YANG DIUBAH ---
   // WebSocket URL menggunakan Cloudflare Tunnel Anda
   // Kita ubah 'https://...' dari Cloudflare menjadi 'wss://...'
-  WS_BASE_URL: 'wss://programmes-techrepublic-scanned-msgstr.trycloudflare.com',
+  WS_BASE_URL: 'wss://loving-refurbished-greatest-warner.trycloudflare.com',
 
   // ------------------------------
   // Backend API (Products, Orders, Stock)
