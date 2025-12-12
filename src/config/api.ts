@@ -8,7 +8,8 @@ export const API_CONFIG = {
   // --- BAGIAN INI YANG DIUBAH ---
   // WebSocket URL menggunakan Cloudflare Tunnel Anda
   // Kita ubah 'https://...' dari Cloudflare menjadi 'wss://...'
-  WS_BASE_URL: 'wss://greg-car-driven-mechanism.trycloudflare.com/',
+  WS_BASE_URL: 'wss://programmes-techrepublic-scanned-msgstr.trycloudflare.com/',
+
   // ------------------------------
   // Backend API (Products, Orders, Stock)
   BACKEND_BASE_URL: import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:8000',
