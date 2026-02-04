@@ -57,7 +57,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header onSearch={handleSearch} searchQuery={searchQuery} />
+      <Header />
 
       <main className="flex-1">
         {/* Hero Section */}
